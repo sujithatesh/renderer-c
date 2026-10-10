@@ -5,6 +5,18 @@
 internal void
 populate_pixel_buffer(PIXEL_BUFFER* px_buf)
 {
-	r_fill_background(px_buf, GREY);
-	r_draw_rectangle_outline(px_buf, V2(10, 10),px_buf->width - 20, px_buf->height - 20, WHITE);
+	r_fill_background(px_buf, BLUE);
+	r_fill_background_avx2(px_buf, GREY);
+	static int offset = 0;
+	if((offset >= 40) == 0 && offset > -40)
+	{
+		offset -= 1;
+	}
+	else 
+	{
+		offset += 1;
+	}
+	
+	r_draw_rectangle(px_buf, V2(100,100), 307, 207, PRIMARY_YELLOW);
+	r_draw_rectangle_avx2(px_buf, V2(100, 100), 307, 207, WHITE);
 }

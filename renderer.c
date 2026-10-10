@@ -1,11 +1,24 @@
 #include "renderer.h"
+#include <immintrin.h>
 
 internal void 
 r_fill_background(PIXEL_BUFFER *px_buf, COLORS color)
 {
+	
 	for(uint32_t i = 0; i < px_buf->width * px_buf->height; i++)
 	{
 		px_buf->pixels[i] = color;
+	}
+}
+
+internal void 
+r_fill_background_avx2(PIXEL_BUFFER *px_buf, COLORS color)
+{
+	
+	__m256i color_vec = _mm256_set1_epi32(color);
+	for(int i = 0; i  + 8 < px_buf->width * px_buf->height; i+=8)
+	{
+		_mm256_storeu_si256((__m256i*)(px_buf->pixels + i), color_vec);
 	}
 }
 
@@ -33,6 +46,28 @@ r_draw_rectangle(PIXEL_BUFFER* px_buf, v2 bottom_left, uint32_t width, uint32_t 
 		for(int j = bottom_left.y; j < bottom_left.y + height; j++)
 		{
 			r_draw_point(px_buf, V2(i,j), color);
+		}
+	}
+}
+
+// TODO(sujith):  check bounds
+internal void
+r_draw_rectangle_avx2(PIXEL_BUFFER* px_buf, v2 bottom_left, uint32_t width, uint32_t height, COLORS color)
+{
+	__m256i color_vec = _mm256_set1_epi32(color);
+	uint32_t top_y    = px_buf->height - bottom_left.y - height;
+	for(uint32_t i = top_y; i < top_y + height; i++)
+	{
+		uint32_t* row_ptr        = px_buf->pixels + (i * px_buf->width);
+		uint32_t remainder       = (uint32_t)(bottom_left.x + width) % 8;
+		uint32_t remainder_start = bottom_left.x + width - remainder;
+		for(int j = bottom_left.x; j < remainder_start; j+=8)
+		{
+			_mm256_storeu_si256((__m256i*)(row_ptr + j), color_vec);
+		}
+		for(uint32_t j = remainder_start + 1; j < remainder_start + remainder; j++)
+		{
+			r_draw_point(px_buf, V2(j ,(px_buf->height - i) - 1), color);
 		}
 	}
 }

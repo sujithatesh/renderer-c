@@ -34,15 +34,13 @@ struct ctx{
 	struct xdg_toplevel* xdg_toplevel;
 	buffer buffers[2];
 	buffer *prev_buffer;
-	struct 
-		uint32_t *shm_data;
+	struct uint32_t *shm_data;
 	enum window_flags flags;
 	enum wl_output_transform transform;
 	uint32_t width, height, border, scale;
 	uint32_t formats;
 	uint32_t wait_for_configure;
 };
-
 
 internal struct wl_display* create_display(ctx* app_ctx);
 internal void create_window(ctx* app_ctx, int width, int height, enum wl_output_transform transform, int scale);
@@ -119,6 +117,11 @@ internal const
 struct wl_buffer_listener buffer_listener = 
 {
 	buffer_release
+};
+
+internal
+struct wl_callback_listener frame_listener = {
+	.done = redraw
 };
 
 #endif //MAIN_H

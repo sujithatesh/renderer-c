@@ -100,7 +100,7 @@ create_window(ctx* app_ctx, int width, int height,
 							enum wl_output_transform transform, int scale)
 {
 	app_ctx->callback  = NULL;
-	app_ctx->width     = width;
+	app_ctx->width     = width + 8;
 	app_ctx->height    = height;
 	app_ctx->border    = 10;
 	app_ctx->transform = transform;
@@ -278,20 +278,33 @@ redraw(void *data, struct wl_callback *callback, uint32_t time)
 	uint32_t bwidth, bheight, bpitch, bradius;
 	float bx, by;
 	
+	if(callback)
+	{
+		wl_callback_destroy(callback);
+	}
+	
 	buffer = window_next_buffer(app_ctx);
+	if(!buffer)
+	{
+		app_ctx->callback = wl_surface_frame(app_ctx->surface);
+		wl_callback_add_listener(app_ctx->callback, &frame_listener, app_ctx);
+		wl_surface_commit(app_ctx->surface);
+		return;
+	}
+	
 	app_ctx->wait_for_configure = 0;
 	
-	uint32_t *pixels = (uint32_t *) buffer->shm_data;
-	
-	
-	PIXEL_BUFFER *px_ctx = malloc(sizeof(PIXEL_BUFFER)) ;
-	px_ctx->width = app_ctx->width;
-	px_ctx->height = app_ctx->height;
-	px_ctx->pixels = pixels;
-	populate_pixel_buffer(px_ctx);
+	PIXEL_BUFFER px_ctx;
+	px_ctx.width = app_ctx->width;
+	px_ctx.height = app_ctx->height;
+	px_ctx.pixels = (uint32_t *) buffer->shm_data;
+	populate_pixel_buffer(&px_ctx);
 	buffer->busy = 1;
 	wl_surface_attach(app_ctx->surface,buffer->buffer, 0, 0);
 	wl_surface_damage(app_ctx->surface, 0, 0, app_ctx->width, app_ctx->height);
+	// setup for next frame
+	app_ctx->callback = wl_surface_frame(app_ctx->surface);
+	wl_callback_add_listener(app_ctx->callback, &frame_listener, app_ctx);
 	wl_surface_commit(app_ctx->surface);
 }
 
@@ -304,7 +317,7 @@ signal_int(int signum)
 int main(void)
 {
 	struct sigaction sigint;
-	int width = 1200, height = 900, scale = 1, ret = 0;
+	int width = 1200 , height = 900, scale = 1, ret = 0;
 	ctx* app_ctx = (ctx*)malloc(sizeof(ctx));
 	app_ctx->display = create_display(app_ctx);
 	create_window(app_ctx, width, height, WL_OUTPUT_TRANSFORM_NORMAL, 1);
